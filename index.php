@@ -371,7 +371,7 @@ class Goods {
         // 单位转换为 inch
         $longestSide = $this->_getLongestSide(); // 最长边 inch
         $secondLongestSide = $this->_getSecondLongestSide(); // 次长边 inch
-        $thirdLongestSide = $this->_getThirdSide(); // 次长边 inch
+        $thirdLongestSide = $this->_getThirdSide(); // 第三长边 inch
 
         $this->girth = ceil($longestSide + ($secondLongestSide + $thirdLongestSide) * 2);
     }
@@ -383,7 +383,7 @@ class Goods {
         // 单位转换为 inch
         $longestSide = $this->_getLongestSide(); // 最长边 inch
         $secondLongestSide = $this->_getSecondLongestSide(); // 次长边 inch
-        $thirdLongestSide = $this->_getThirdSide(); // 次长边 inch
+        $thirdLongestSide = $this->_getThirdSide(); // 第三长边 inch
 
         $this->bulkWeight = (int)ceil($longestSide * $secondLongestSide * $thirdLongestSide / self::BULK_WEIGHT_BASE);
     }
