@@ -170,33 +170,33 @@ class Goods {
 
 
     /**
-     * @var int 长度 单位 mm
+     * @var int 长度 单位 inch
      */
     private int $length;
 
 
     /**
-     * @var int 宽度 单位 mm
+     * @var int 宽度 单位 inch
      */
     private int $width;
 
     /**
-     * @var int 高度 单位 mm
+     * @var int 高度 单位 inch
      */
     private int $height;
 
     /**
-     * @var int 围长 单位 mm
+     * @var int 围长 单位 inch
      */
     private int $girth;
 
     /**
-     * @var int 重量 单位 g
+     * @var int 重量 单位 lb
      */
     private int $weight;
 
     /**
-     * @var int 体积重 单位 g
+     * @var int 体积重 单位 lb
      */
     private int $bulkWeight;
 
