@@ -64,7 +64,7 @@ class UnitConvertHelper {
     public function cm2in($cm): float {
         if(!$this->_checkValidity($cm)) {
             // TODO 异常处理
-            new Exception('cm is not valid', 5);
+            new Exception('cm is not valid');
         }
         return (float)bcdiv($cm, self::IN_CM_RATIO, self::CONVERT_PRECISION);
     }
@@ -77,7 +77,7 @@ class UnitConvertHelper {
     public function kg2lb($kg): float {
         if(!$this->_checkValidity($kg)) {
             // TODO 异常处理
-            new Exception('kg is not valid', 7);
+            new Exception('kg is not valid');
         }
         return (float)bcdiv($kg, self::LB_KG_RATIO, self::CONVERT_PRECISION);
     }
@@ -91,6 +91,75 @@ class UnitConvertHelper {
     }
 }
 
+class GoodsType {
+    private array $tag_list;
+
+    public function __construct() {
+        $this->tag_list = [
+            'OUT_SPACE' => function (Goods $goods, &$tag_list = []) {
+
+                $realWeight = $goods->getRealWeight();
+                $longestSide = $goods->getLongestSide();
+
+                // OUT_SPACE：（实重大于150）或（最长边大于108）或（围长大于165）
+
+                if($realWeight > 150 || $longestSide > 108) {
+                    $tag_list[] = 'OUT_SPACE';
+                    return true;
+                }
+                return false;
+
+            },
+            'OVERSIZE' => function (Goods $goods, &$tag_list = []) {
+
+                $girth = $goods->getGirth();
+                $longestSide = $goods->getLongestSide();
+
+                // OVERSIZE：（围长大于130，小于等于165）或（最长边大于等于96小于108）
+
+                if (($girth > 130 && $girth <= 165) || ($longestSide >= 96 && $longestSide < 108)) {
+                    $tag_list[] = 'OVERSIZE';
+                    return true;
+                }
+                return false;
+            },
+            'AHS' => function (Goods $goods, &$tag_list = []) {
+
+                $realWeight = $goods->getRealWeight();
+                $girth = $goods->getGirth();
+                $longestSide = $goods->getLongestSide();
+                $secondLongestSide = $goods->getSecondLongestSide();
+
+                /**
+                 * 是否成功匹配标签
+                 */
+                $flg = false;
+
+                if($realWeight > 50 && $realWeight <= 150) {
+                    $flg = true;
+                    $tag_list[] = 'AHS-WEIGHT';
+                }
+                if($girth > 105 || $secondLongestSide >= 30 || ($longestSide >= 48 && $longestSide < 108)) {
+                    $flg = true;
+                    $tag_list[] = 'AHS-SIZE';
+                }
+
+                return $flg;
+            },
+        ];
+    }
+
+    public function getTagList(Goods $goods) {
+        $tag = [];
+        foreach ($this->tag_list as $tag_method) {
+            $res = $tag_method($goods, $tag);
+            if($res) {
+                break;
+            }
+        }
+        return $tag;
+    }
+}
 
 class Goods {
 
@@ -133,25 +202,18 @@ class Goods {
 
 
     /**
-     * 货物的类型标签
-     * @var array
-     */
-    private array $tag = [];
-
-    /**
      * 单位转换助手
      * @var UnitConvertHelper
      */
     private UnitConvertHelper $unitConvertHelper;
 
-    public function __construct(int $length, int $width, int $height, int $weight) {
+    public function __construct(float $length, float $width, float $height, float $weight) {
 
         $this->unitConvertHelper = new UnitConvertHelper();
         $this->_setLength($length)->_setWidth($width)->_setHeight($height)->_setWeight($weight);
 
         $this->_computeGirth();
         $this->_computeBulkWeight();
-        $this->_computeGoodsTypeTag();
 
     }
 
@@ -160,14 +222,51 @@ class Goods {
      * @return array
      */
     public function getGoodsTag(): array {
-        return $this->tag;
+        $goodsType = new GoodsType();
+        return $goodsType->getTagList($this);
     }
+
+
+    /**
+     * 获取商品实重
+     * @return int
+     */
+    public function getRealWeight(): int {
+        return $this->_getRealWeight();
+    }
+
+    /**
+     * 获取商品围长
+     * @return int
+     */
+    public function getGirth() {
+        return $this->girth;
+    }
+
+    /**
+     * 获取商品最长边
+     * @return mixed
+     */
+    public function getLongestSide() {
+        return $this->_getLongestSide();
+    }
+
+    /**
+     * 获取商品次长边
+     * @return mixed
+     */
+    public function getSecondLongestSide() {
+        return $this->_getSecondLongestSide();
+    }
+
+    // TODO 若干方法 ......
+
 
     /**
      * 获取商品实重 lb
      * @return int
      */
-    private function _getRealWeightLB(): int {
+    private function _getRealWeight(): int {
 
         return (int)max($this->weight, $this->bulkWeight);
     }
@@ -175,13 +274,13 @@ class Goods {
 
     /**
      * 设置 长度
-     * @param int $length 单位 cm
+     * @param float $length 单位 cm
      * @return goods
      */
-    private function _setLength(int $length): goods {
+    private function _setLength(float $length): goods {
         if(!$this->_checkValidity($length)) {
             // TODO 异常处理
-            new Exception('length is not valid', 1);
+            new Exception('length is not valid');
         }
         $this->length = ceil($this->unitConvertHelper->cm2in($length));
         return $this;
@@ -189,13 +288,13 @@ class Goods {
 
     /**
      * 设置 宽度
-     * @param int $width 单位 cm
+     * @param float $width 单位 cm
      * @return goods
      */
-    private function _setWidth(int $width): goods {
+    private function _setWidth(float $width): goods {
         if(!$this->_checkValidity($width)) {
             // TODO 异常处理
-            new Exception('width is not valid', 2);
+            new Exception('width is not valid');
         }
         $this->width = ceil($this->unitConvertHelper->cm2in($width));
         return $this;
@@ -203,13 +302,13 @@ class Goods {
 
     /**
      * 设置 高度
-     * @param int $height 单位 cm
+     * @param float $height 单位 cm
      * @return goods
      */
-    private function _setHeight(int $height): goods {
+    private function _setHeight(float $height): goods {
         if(!$this->_checkValidity($height)) {
             // TODO 异常处理
-            new Exception('height is not valid', 3);
+            new Exception('height is not valid');
         }
         $this->height = ceil($this->unitConvertHelper->cm2in($height));
         return $this;
@@ -217,13 +316,13 @@ class Goods {
 
     /**
      * 设置 重量
-     * @param int $weight 单位 kg
+     * @param float $weight 单位 kg
      * @return goods
      */
-    private function _setWeight(int $weight): goods {
+    private function _setWeight(float $weight): goods {
         if(!$this->_checkValidity($weight)) {
             // TODO 异常处理
-            new Exception('height is not valid', 4);
+            new Exception('height is not valid');
         }
         $this->weight = ceil($this->unitConvertHelper->kg2lb($weight));
         return $this;
@@ -287,31 +386,6 @@ class Goods {
         $thirdLongestSide = $this->_getThirdSide(); // 次长边 inch
 
         $this->bulkWeight = (int)ceil($longestSide * $secondLongestSide * $thirdLongestSide / self::BULK_WEIGHT_BASE);
-    }
-
-    private function _computeGoodsTypeTag() {
-
-        $realWeight = $this->_getRealWeightLB(); // 实重 lb
-        $girth = $this->girth; // 围长 inch
-        $longestSide = $this->_getLongestSide(); // 最长边 inch
-        $secondLongestSide = $this->_getSecondLongestSide(); // 次长边 inch
-
-        switch (true) {
-            case $realWeight > 150 || $longestSide > 108 :
-                $this->tag[] = 'OUT_SPACE';
-                break;
-            case ($girth > 130 && $girth <= 165) || ($longestSide >= 96 && $longestSide < 108):
-                $this->tag[] = 'OVERSIZE';
-                break;
-            default:
-                if($realWeight > 50 && $realWeight <= 150) {
-                    $this->tag[] = 'AHS-WEIGHT';
-                }
-                if($girth > 105 || $secondLongestSide >= 30 || ($longestSide >= 48 && $longestSide < 108)) {
-                    $this->tag[] = 'AHS-SIZE';
-                }
-                break;
-        }
     }
 
 
